@@ -1,0 +1,9 @@
+baseURL = 'https://tv-guide.github.io/'
+languageCode = 'en-us'
+title = 'TV Guide'
+theme = "gh-release"
+
+# Parameters
+[params]
+owner = "tv-guide"
+repository = "xmltv"

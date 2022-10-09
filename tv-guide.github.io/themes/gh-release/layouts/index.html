@@ -1,0 +1,17 @@
+{{ define "main" }}
+<main>
+    <p>You can select your XMLTV file below and import it directly into your preferred guide viewer.</p>
+    <div id="downloads">
+        {{ $files := readDir "static/xmltv" }}
+        {{ if not $files }}
+        <p>No assets found for latest releases. Please check back later!</p>
+        {{ else }}
+        <ul>
+            {{- range $files }}
+            <li><a href="{{ (printf "xmltv/%s" .Name) | relURL }}">{{ .Name }}</a></li>
+            {{- end }}
+        </ul>
+        {{ end }}
+    </div>
+</main>
+{{ end }}

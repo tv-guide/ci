@@ -1,0 +1,4 @@
+resources
+.hugo_build.lock
+/data/files.yaml
+/public

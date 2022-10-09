@@ -1,0 +1,114 @@
+name: Scrape
+
+on:
+  push:
+    paths:
+      - '.github/workflows/scrape.yml'
+      - 'guide/**'
+      - 'scrapy.cfg'
+      - 'scripts/**'
+  schedule:
+    - cron: '0 3 * * *'  # every day at 3am
+
+env:
+  SCRAPER_REPOSITORY: tv-guide/xmltv-scraper
+
+jobs:
+  DetermineVersion:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/tv-guide/xmltv-scraper
+      credentials:
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: tv-guide/xmltv-scraper
+          ssh-key: ${{ secrets.XMLTV_SCRAPER_SSH_KEY }}
+      - id: version-matrix
+        shell: bash
+        run: |
+          set -euxo pipefail
+          matrix_versions="$(scrapy list | xargs -n1 ./bin/crawl.py | jq -cMs '.')"
+          echo "::set-output name=matrix::$matrix_versions"
+    outputs:
+      matrix: ${{ steps.version-matrix.outputs.matrix }}
+
+  Scrape:
+    needs: DetermineVersion
+    strategy:
+      fail-fast: false
+      matrix:
+        crawler: ${{ fromJson(needs.DetermineVersion.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    name: Scrape ${{ matrix.crawler }}
+    container:
+      image: ghcr.io/${{ github.repository }}
+      credentials:
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: tv-guide/xmltv-scraper
+          ssh-key: ${{ secrets.XMLTV_SCRAPER_SSH_KEY }}
+      - name: Prepare ${{ matrix.crawler }}
+        run: mkdir -p xmltv
+      - name: Scrape ${{ matrix.crawler }}
+        # todo only do 1 day when not on schedule
+        run: exec scrapy crawl ${{ matrix.crawler }} --overwrite-output xmltv/${{ matrix.crawler }}.xml --output-format xmltv
+      - uses: actions/upload-artifact@master
+        with:
+          name: xmltv-files
+          path: xmltv/
+
+  Deploy:
+    runs-on: ubuntu-latest
+    needs:
+      - Scrape
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/download-artifact@master
+        with:
+          name: xmltv-files
+          path: xmltv/
+
+      - run: |
+          ls -la xmltv/
+          find xmltv -type f -empty -delete
+          ls -la xmltv/
+
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@v2
+        with:
+          hugo-version: 'latest'
+
+      - name: Build
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p tv-guide.github.io/static
+          mv xmltv tv-guide.github.io/static/xmltv
+          (cd tv-guide.github.io/ && hugo --minify)
+
+      - name: Deploy
+        if: github.event_name == 'schedule'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          deploy_key: ${{ secrets.TV_GUIDE_GITHUB_IO_SSH_KEY }}
+          external_repository: ${{ github.repository_owner }}/tv-guide.github.io
+          publish_dir: ./tv-guide.github.io/public
+          publish_branch: main
+
+      - name: Clean artifacts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl --fail --silent --show-error \
+            --request POST \
+            --header "Accept: application/vnd.github+json" \
+            --header "Authorization: token $GITHUB_TOKEN" \
+            --data '{"event_type":"cleanup","client_payload":{"run_id":"${{ github.run_id }}"}}' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/dispatches" 

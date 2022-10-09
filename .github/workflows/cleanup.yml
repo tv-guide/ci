@@ -1,0 +1,17 @@
+name: Cleanup
+
+on:
+  repository_dispatch:
+    types: [cleanup]
+
+jobs:
+  Cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Clean artifacts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./scripts/cleanup-artifacts.sh "$GITHUB_REPOSITORY" "${{ github.event.client_payload.run_id }}"

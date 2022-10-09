@@ -1,0 +1,8 @@
+name = "GH Release"
+license = "MIT"
+min_version = "0.20"
+
+[original]
+author = "morph"
+homepage = "morph.sh"
+repo = "https://github.com/colorchestra/smol"

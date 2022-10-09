@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="{{ .Site.LanguageCode | default "en-us" }}">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<style type=text/css>body{font-family:monospace;}</style>
+	<title>{{ .Title }}</title>
+	<link rel="stylesheet" href="{{ "css/style.css" | relURL }}">
+</head>
+<body>
+	<header>
+	<h1>= <a href="{{ .Site.BaseURL }}">{{ .Site.Title }}</a> =</h1>
+	</header>
+	{{ block "main" . }}{{ end }}
+	<footer></footer>
+</body>
+</html>
