@@ -30,7 +30,7 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          matrix_versions="$(scrapy list | xargs -n1 ./bin/crawl.py | jq -cMs '.')"
+          matrix_versions="$(scrapy list | xargs -n1 ./bin/crawl.py list | jq -cnR '[inputs | select(length>0)]')"
           echo "::set-output name=matrix::$matrix_versions"
     outputs:
       matrix: ${{ steps.version-matrix.outputs.matrix }}
@@ -40,11 +40,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        crawler: ${{ fromJson(needs.DetermineVersion.outputs.matrix) }}
+        spider: ${{ fromJson(needs.DetermineVersion.outputs.matrix) }}
     runs-on: ubuntu-latest
-    name: Scrape ${{ matrix.crawler }}
+    env:
+      SPIDER_NAME: ${{ fromJson(matrix.spider).name }}
+    name: Scrape ${{ fromJson(matrix.spider).name }}
     container:
-      image: ghcr.io/${{ github.repository }}
+      image: ghcr.io/tv-guide/xmltv-scraper
       credentials:
         username: ${{ github.repository_owner }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -53,11 +55,12 @@ jobs:
         with:
           repository: tv-guide/xmltv-scraper
           ssh-key: ${{ secrets.XMLTV_SCRAPER_SSH_KEY }}
-      - name: Prepare ${{ matrix.crawler }}
+      - name: Prepare ${{ env.SPIDER_NAME }}
         run: mkdir -p xmltv
-      - name: Scrape ${{ matrix.crawler }}
+      - name: Scrape ${{ env.spider_name }}
         # todo only do 1 day when not on schedule
-        run: exec scrapy crawl ${{ matrix.crawler }} --overwrite-output xmltv/${{ matrix.crawler }}.xml --output-format xmltv
+        run: exec ./bin/crawl.py scrape '${{ matrix.spider }}'
+#        run: exec scrapy crawl $${{ matrix.crawler }}  --output-format xmltv
       - uses: actions/upload-artifact@master
         with:
           name: xmltv-files
