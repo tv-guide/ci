@@ -30,7 +30,7 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          matrix_versions="$(scrapy list | xargs -n1 ./bin/crawl.py list | jq -cnR '[inputs | select(length>0)]')"
+          matrix_versions="$(scrapy list | xargs -I% ./bin/crawl.py list % '${{ github.event_name == 'schedule' }}' | jq -cnR '[inputs | select(length>0)]')"
           echo "::set-output name=matrix::$matrix_versions"
     outputs:
       matrix: ${{ steps.version-matrix.outputs.matrix }}
@@ -62,7 +62,10 @@ jobs:
       - name: Clean ${{ env.spider_name }}
         run: |
           if [ -s 'xmltv/${{ fromJson(matrix.spider).name }}.xml' ]; then
-            exec ./bin/tv_clean.py --output 'xmltv/${{ fromJson(matrix.spider).name }}.xml' 'xmltv/${{ fromJson(matrix.spider).name }}.xml'
+            if ! ./bin/tv_clean.py --output 'xmltv/${{ fromJson(matrix.spider).name }}.xml' 'xmltv/${{ fromJson(matrix.spider).name }}.xml'; then
+              cat 'xmltv/${{ fromJson(matrix.spider).name }}.xml'
+              exit 1
+            fi
           fi
       - uses: actions/upload-artifact@master
         with:
