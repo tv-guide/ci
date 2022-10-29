@@ -60,7 +60,7 @@ jobs:
       - name: Scrape ${{ env.spider_name }}
         run: exec ./bin/crawl.py scrape '${{ matrix.spider }}'
       - name: Clean ${{ env.spider_name }}
-        run: exec ./bin/tv_clean.py --output 'xmltv/${{ matrix.spider }}.xml' 'xmltv/${{ matrix.spider }}.xml'
+        run: exec ./bin/tv_clean.py --output 'xmltv/${{ fromJson(matrix.spider).name }}.xml' 'xmltv/${{ fromJson(matrix.spider).name }}.xml'
       - uses: actions/upload-artifact@master
         with:
           name: xmltv-files
