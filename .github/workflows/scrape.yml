@@ -58,9 +58,9 @@ jobs:
       - name: Prepare ${{ env.SPIDER_NAME }}
         run: mkdir -p xmltv
       - name: Scrape ${{ env.spider_name }}
-        # todo only do 1 day when not on schedule
         run: exec ./bin/crawl.py scrape '${{ matrix.spider }}'
-#        run: exec scrapy crawl $${{ matrix.crawler }}  --output-format xmltv
+      - name: Clean ${{ env.spider_name }}
+        run: exec ./bin/tv_clean.py --output 'xmltv/${{ matrix.spider }}.xml' 'xmltv/${{ matrix.spider }}.xml'
       - uses: actions/upload-artifact@master
         with:
           name: xmltv-files
